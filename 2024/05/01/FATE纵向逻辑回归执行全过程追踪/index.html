@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Serif SC:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="FATE框架里纵向逻辑回归的执行流程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FATE纵向逻辑回归执行全过程追踪">
+<meta property="og:url" content="http://example.com/2024/05/01/FATE%E7%BA%B5%E5%90%91%E9%80%BB%E8%BE%91%E5%9B%9E%E5%BD%92%E6%89%A7%E8%A1%8C%E5%85%A8%E8%BF%87%E7%A8%8B%E8%BF%BD%E8%B8%AA/index.html">
+<meta property="og:site_name" content="MyBlog">
+<meta property="og:description" content="FATE框架里纵向逻辑回归的执行流程">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-05-01T12:59:36.000Z">
+<meta property="article:author" content="Coup De Grace">
+<meta property="article:tag" content="FATE">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2024/05/01/FATE%E7%BA%B5%E5%90%91%E9%80%BB%E8%BE%91%E5%9B%9E%E5%BD%92%E6%89%A7%E8%A1%8C%E5%85%A8%E8%BF%87%E7%A8%8B%E8%BF%BD%E8%B8%AA/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>FATE纵向逻辑回归执行全过程追踪 | MyBlog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">MyBlog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">4</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">8</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/05/01/FATE%E7%BA%B5%E5%90%91%E9%80%BB%E8%BE%91%E5%9B%9E%E5%BD%92%E6%89%A7%E8%A1%8C%E5%85%A8%E8%BF%87%E7%A8%8B%E8%BF%BD%E8%B8%AA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Coup De Grace">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="MyBlog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FATE纵向逻辑回归执行全过程追踪
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2024-05-01 20:59:36" itemprop="dateCreated datePublished" datetime="2024-05-01T20:59:36+08:00">2024-05-01</time>
+            </span>
+
+          
+            <div class="post-description">FATE框架里纵向逻辑回归的执行流程</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="背景介绍">背景介绍</h2>
+<p>这篇文章讲一下FATE框架里的纵向逻辑回归。</p>
+<p>具体文件在<code>/fate/python/federatedml/linear_model/logistic_regression/hetero_sshe_logistic_regression</code></p>
+<p>这里将以1.7.2的版本展开</p>
+<h2 id="hetero-sshe-logistic-regression源码实现">hetero_sshe_logistic_regression源码实现</h2>
+<p>源码位于<code>/fate/python/federatedml/linear_model/logistic_regression/hetero_sshe_logistic_regression</code>中，</p>
+<p>一共有三个，分别为guest类，host类和base类。主要调度从<code>fit()</code>方法。</p>
+<h3 id="作业提交">作业提交</h3>
+<p>用户通过conf文件和，数据可以从</p>
+<p>我们可以从<code>fate/examples/dsl/v2/hetero_sshe_lr</code>选择自己想执行的任务。我们在这里选择 <code>hetero_lr_normal_dsl.json</code>，它从guest和host各接受一个数据集进行联邦逻辑回归训练。</p>
+<p>数据可以从 fate/examples/data/ 里的 <code>breast_hetero_host.csv</code> 和 <code>breast_hetero_guest.csv</code> 。一共有569个样本，其中host有20个特征，guest有10个特征外加一个标签。这是一个二分类的数据集。</p>
+<p>用户提交对应的入口是 <code>python/fate_flow/apps/job_app.py</code> 中的 <code>submit_job()</code> ，实际的处理由 <code>DAGScheduler.submit()</code> 完成。</p>
+<p>我们最重要的是跟踪 dsl 数据的传递与处理过程，作业提交中最重要的一部分内容就是 <code>FederatedScheduler.create_job()</code> 通知各个参与方去创建作业(job)与任务(task)。此方法内部封装的就是一个 RPC 请求，实际调用 <code>python/fate_flow/scheduling_apps/party_app.py</code> 中 <code>/&lt;job_id&gt;/&lt;role&gt;/&lt;party_id&gt;/create</code> 接口。</p>
+<p>参与方收到请求后会创建对应的作业（job）与任务（task）。任务的创建对应的实现在 <code>python/fate_flow/controller/job_controller.py</code> 中, 具体如下所示：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">initialize_task_holder_for_scheduling</span>(<span class="params">cls, role, party_id, components, common_task_info, provider_info</span>):</span><br><span class="line">    <span class="keyword">for</span> component_name <span class="keyword">in</span> components:</span><br><span class="line">        task_info = {}</span><br><span class="line">        task_info.update(common_task_info)</span><br><span class="line">        task_info[<span class="string">"component_name"</span>] = component_name</span><br><span class="line">        task_info[<span class="string">"component_module"</span>] = <span class="string">""</span></span><br><span class="line">        task_info[<span class="string">"provider_info"</span>] = provider_info</span><br><span class="line">        task_info[<span class="string">"component_parameters"</span>] = {}</span><br><span class="line">        TaskController.create_task(role=role, party_id=party_id,</span><br><span class="line">                                    run_on_this_party=common_task_info[<span class="string">"run_on_this_party"</span>],</span><br><span class="line">                                    task_info=task_info)</span><br></pre></td></tr></table></figure>
+<p>可以看到，实际是通过遍历 <code>components</code> 依次创建 task，即每个组件 (component) 会对应创建一个 task。</p>
+<p>在我们这个任务里，分别是<code>data_transform</code>,<code>intersection</code>,<code>hetero_sshe_lr</code>,<code>evaluation</code></p>
+<h3 id="作业执行">作业执行</h3>
+<p>在作业创建完成后，会确定作业前置依赖是否完成，并执行对应的资源申请，直到一切就绪之后，才能开始调度执行。实际执行入口为 <code>python/fate_flow/scheduler/dag_scheduler.py</code> 中对应的 <code>DAGScheduler.run_do()</code> 方法，此方法执行 job 的状态流转，并将就绪的 job 调用 <code>schedule_running_job()</code> 运行起来。</p>
+<p>此方法会以 task 为单位执行 job，确定 task 相关的资源就绪后，最终会调用 <code>FederatedScheduler.start_task()</code> 通知各个参与方执行 task。这个同样是一个 RPC 请求，最终调用的是 <code>python/fate_flow/scheduling_apps/party_app.py</code> 文件中 <code>start_task()</code> 执行任务，与前面创建 job 时的套路是一样的。</p>
+<p>参与方上 task 执行的是在 <code>TaskController.start_task()</code> 完成的，task 首先会选择执行引擎（Engine），目前 FATE 支持三种执行引擎 EGGROLL，SPARK，LINKIS_SPARK。</p>
+<p>不同的执行引擎只是执行环境上有差异，最终完成的事情都是一样的。下面以 FATE 自研的 <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/667636158">EggrollEngine</a> 为例，可以看到最终就是调用了 <code>python/fate_flow/manager/worker_manager.py</code> 中的 <code>WorkerManager.start_task_worker()</code> 完成 task 执行的，具体如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">start_task_worker</span>(<span class="params">cls, worker_name, task: Task, task_parameters: RunParameters = <span class="literal">None</span>,</span></span><br><span class="line"><span class="params">                          executable: <span class="built_in">list</span> = <span class="literal">None</span>, extra_env: <span class="built_in">dict</span> = <span class="literal">None</span>, **kwargs</span>):</span><br><span class="line">        <span class="comment"># 实际执行的 python 代码，对应的路径为 python/fate_flow/worker/task_executor.py </span></span><br><span class="line">        <span class="keyword">if</span> worker_name <span class="keyword">is</span> WorkerName.TASK_EXECUTOR:</span><br><span class="line">            <span class="keyword">from</span> fate_flow.worker.task_executor <span class="keyword">import</span> TaskExecutor</span><br><span class="line">            module_file_path = sys.modules[TaskExecutor.__module__].__file__</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> executable:</span><br><span class="line">            process_cmd = executable</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            process_cmd = [env.get(<span class="string">"PYTHON_ENV"</span>) <span class="keyword">or</span> sys.executable <span class="keyword">or</span> <span class="string">"python3"</span>]</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 构造本地命令行 </span></span><br><span class="line">        common_cmd = [</span><br><span class="line">            module_file_path,</span><br><span class="line">            <span class="string">"--job_id"</span>, task.f_job_id,</span><br><span class="line">            <span class="string">"--component_name"</span>, task.f_component_name,</span><br><span class="line">        ]</span><br><span class="line">        process_cmd.extend(common_cmd)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 创建新进程，执行命令，实际执行 python3 python/fate_flow/worker/task_executor.py --job_id xxx --component_name xxx </span></span><br><span class="line">        p = process_utils.run_subprocess(job_id=task.f_rjob_id, config_dir=config_dir, process_cmd=process_cmd,</span><br><span class="line">                                         added_env=env, log_dir=log_dir, cwd_dir=config_dir, process_name=worker_name.value,</span><br><span class="line">                                         process_id=worker_id)</span><br></pre></td></tr></table></figure>
+<p>可以看到，最终实际的执行可以等价于在命令行直接执行 <code>python3 python/fate_flow/worker/task_executor.py --job_id xxx --component_name xxx</code>，FATE 会在独立的进程直接执行对应的 python 脚本。而作业 id 与组件名是通过命令行参数传递的。</p>
+<h4 id="任务执行流程">任务执行流程</h4>
+<p>任务执行是在 <code>python/fate_flow/worker/task_executor.py</code> 中的 <code>TaskExecutor._run_()</code> 方法上完成的，最核心的功能就是根据组件名（component_name）确定组件对应的模块，然后确定模块对应的代码。简化后如下所示：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_run_</span>(<span class="params">self</span>):</span><br><span class="line">    <span class="comment"># 根据 component_name 确定对应的组件 </span></span><br><span class="line">    component = dsl_parser.get_component_info(component_name=args.component_name)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 根据组件获取对应的组件模块名，用于关联实现代码，即上面文件中 Reader，DataTransform，Intersection，HeteroLinR </span></span><br><span class="line">    module_name = component.get_module()</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 根据组件模块名确定注册的实现模块 </span></span><br><span class="line">    run_object = provider_interface.get(module_name, ComponentRegistry.get_provider_components(provider_name=component_provider.name, provider_version=component_provider.version)).get_run_obj(self.args.role)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 实际执行对应模块的代码 </span></span><br><span class="line">    cpn_output = run_object.run(cpn_input)</span><br></pre></td></tr></table></figure>
+<p>而对应的可执行对象 <code>run_object</code> 到底是如何确定的呢？其对应的基类为 <code>python/fate_flow/components/_base.py</code> 中的 <code>ComponentMeta</code> 类，可以看到其中包含了 <code>get_run_obj()</code> 可以获取可执行对象，此对象包含 <code>run()</code> 方法用于执行业务逻辑。</p>
+<p>而相关的组件的注册也是通过 <code>ComponentMeta</code> 类来完成的，FATE-Flow 项目中全局搜索可以看到对应的组件列表。</p>
+<p>通过 <code>ComponentMeta</code> 注册组件时使用的就是组件模块名，这也能理解为什么是通过组件模块名确定对应的组件实现模块的。</p>
+<p>我们以上面使用的 <code>Reader</code> 组件为例来简单查看实现的结构，其对应的实现在 <code>python/fate_flow/components/reader.py</code> 中：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">reader_cpn_meta = ComponentMeta(<span class="string">"Reader"</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@reader_cpn_meta.bind_runner.on_guest.on_host</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Reader</span>(<span class="title class_ inherited__">ComponentBase</span>):</span><br><span class="line">     <span class="keyword">def</span> <span class="title function_">_run</span>(<span class="params">self, cpn_input: ComponentInputProtocol</span>):</span><br><span class="line">        ...</span><br></pre></td></tr></table></figure>
+<p>可以看到会使用组件模块名 <code>Reader</code> 初始化 <code>ComponentMeta</code> 对象，接下来使用 <code>@reader_cpn_meta.bind_runner</code> 装饰器绑定对应的执行对象，此对象会实现 <code>_run()</code> 方法，其中包含的就是主要的逻辑实现。</p>
+<p>但是最终获取匹配组件时只会调用 <code>run()</code> 方法呀，秘密就藏在对应的基类 <code>ComonentBase</code> 中。 此基类实现了 <code>run()</code> 方法，而此方法中会调用 <code>_run()</code> 完成主要的功能，因此也就能理解上面实际执行中 <code>run_object.run()</code> 的设计了。</p>
+<h4 id="算法任务执行流程">算法任务执行流程</h4>
+<p>前面的 FATE-Flow 工程中图示中可以看到 <code>Reader</code> 对应的组件，但是纵向联邦线性回归中其他的组件都没有看到，其对应的实现都是在 <a target="_blank" rel="noopener" href="https://github.com/FederatedAI/FATE">FATE 项目</a> 中的。</p>
+<p>深入查看 FATE 项目对应的实现，就会发现 FATE 项目中 <code>python/federatedml/components/components.py</code> 也存在一个基本一样的 <code>ComponentMeta</code> 类，用于组件的注册，而大部分的算法相关的组件都是实现在 FATE 项目中的。我们就以上面用到的 <code>HeteroLinR</code> 组件为例看看算法组件的实现。</p>
+<p>实际去查看 <code>HeteroLinR</code> 组件可以看到对应的注册方式与前面的 <code>Reader</code> 组件基本一样：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">hetero_linr_cpn_meta = ComponentMeta(<span class="string">"HeteroLinR"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 注册 guest 角色执行类 </span></span><br><span class="line"><span class="meta">@hetero_linr_cpn_meta.bind_runner.on_guest</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">hetero_linr_runner_guest</span>():</span><br><span class="line">    <span class="keyword">from</span> federatedml.linear_model.coordinated_linear_model.linear_regression.hetero_linear_regression.hetero_linr_guest <span class="keyword">import</span> (</span><br><span class="line">        HeteroLinRGuest, )</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> HeteroLinRGuest</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>实际去查看算法组件的实现类 <code>HeteroLinRGuest</code> 可能就会发现一些差异，可以看到实现的方法如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">HeteroLinRGuest</span>(<span class="title class_ inherited__">HeteroLinRBase</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">fit</span>(<span class="params">self, data_instances, validate_data=<span class="literal">None</span></span>):</span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">predict</span>(<span class="params">self, data_instances</span>):</span><br><span class="line">        ...</span><br></pre></td></tr></table></figure>
+<p>算法组件只实现了 <code>fit()</code> 与 <code>predict()</code> 方法，分别对应于算法训练与推理功能，根据前面的介绍，预期算法组件应该执行 <code>run()</code> 方法，一路追踪到算法组件的基类。此基类为位于 <code>python/federatedml/model_base.py</code> 中的 <code>ModelBase</code> ，在此类中就实现了 <code>run()</code> 方法，此方法同样是调用 <code>_run()</code> 完成主要功能。</p>
+<p>但是与前面的组件不同之处在于，<code>ModelBase</code> 的 <code>_run()</code> 中会根据实际输入生成一个方法列表，然后依次执行。生成方法列表中最重要一部分实现是 <code>python/federatedml/util/component_properties.py</code> 中的 <code>ComponentProperties._train_process()</code> 方法，具体如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_train_process</span>(<span class="params">self, running_funcs, model, train_data, validate_data, test_data, schema</span>):</span><br><span class="line">    <span class="comment"># 仅有训练集的情况 </span></span><br><span class="line">    <span class="keyword">elif</span> self.has_train_data:</span><br><span class="line">        running_funcs.add_func(model.set_flowid, [<span class="string">'fit'</span>])</span><br><span class="line">        running_funcs.add_func(model.fit, [train_data])</span><br><span class="line">        running_funcs.add_func(model.set_flowid, [<span class="string">'validate'</span>])</span><br><span class="line">        running_funcs.add_func(model.predict, [train_data], save_result=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 不存在训练接，仅有测试集，属于推理阶段 </span></span><br><span class="line">    <span class="keyword">elif</span> self.has_test_data:</span><br><span class="line">        running_funcs.add_func(model.set_flowid, [<span class="string">'predict'</span>])</span><br><span class="line">        running_funcs.add_func(model.predict, [test_data], save_result=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> running_funcs</span><br></pre></td></tr></table></figure>
+<p>可以看到根据数据集的不同，执行的方法列表也不同。存在训练集的情况下，会执行 <code>fit()</code> 方法用于模型训练，而存在测试集的情况下就一定会生成 <code>predict()</code> 方法用于推理。看到这边也就能理解前面算法组件的实现了。</p>
+<h4 id="任务间数据传递">任务间数据传递</h4>
+<p>从前面的介绍可以知道，算法组件是通过独立进程执行的，考虑进程之间是隔离的，数据不能直接共享，那么就需要明确下数据是如何传递的呢？实际作业执行中，后续任务的输入很有可能是前面任务执行的输出。比如 <code>DataTransform</code> 组件对应的任务需要执行数据转换，必然会依赖 <code>Reader</code> 组件对应的任务先读取到数据。</p>
+<p>数据的传递细节其实都隐藏在 <code>python/fate_flow/worker/task_executor.py</code> 中的 <code>TaskExecutor._run_()</code> 方法执行过程中，我们只需要关注组件执行输出 <code>cpn_output</code> 的传递路径就可以发现，最终所有的输出会调用 <code>python/fate_flow/operation/job_tracker.py</code> 中的 <code>Tracker.save_output_data()</code> 方法进行持久化。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">save_output_data</span>(<span class="params">...</span>):</span><br><span class="line">    <span class="keyword">if</span> computing_table:</span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 输出数据持久化 </span></span><br><span class="line">        session.Session.persistent(computing_table=computing_table,</span><br><span class="line">                                    namespace=output_table_namespace,</span><br><span class="line">                                    name=output_table_name,</span><br><span class="line">                                    schema=schema,</span><br><span class="line">                                    part_of_data=part_of_data,</span><br><span class="line">                                    engine=output_storage_engine,</span><br><span class="line">                                    engine_address=output_storage_address,</span><br><span class="line">                                    token=token)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> output_table_namespace, output_table_name</span><br></pre></td></tr></table></figure>
+<p>输出数据存储时会关联上对应的 <code>table_namespace</code> 和 <code>table_name</code></p>
+<p>而组件输入数据的构造主要来自于 <code>TaskExecutor.get_task_run_args()</code>，深入实现可以看到获取对应的 <code>table_namespace</code> 和 <code>table_name</code> 然后获取对应的数据的流程，具体就不额外展开了，感兴趣的可以自行探索。</p>
+<h2 id="总结">总结</h2>
+<p>通过这篇文章的介绍，我们梳理了 FATE 作业执行的完整流程，简单总结下其中涉及的关键信息：</p>
+<p>1、FATE 作业提交的 dsl 文件中会定义作业中包含的组件（component）列表，FATE 收到请求后会创建对应的作业（job）, 然后为每个组件（component）生成对应的任务（task）；</p>
+<p>2、每个任务（task）使用独立的进程进行执行，实际执行是根据组件对应的组件模块名确定对应的组件执行代码，实际的执行过程就是执行组件类中的 <code>run()</code> 方法；</p>
+<p>3、算法组件基类中会根据作业输入确定执行的方法列表， 存在训练数据集是会执行 <code>fit()</code> 进行训练，存在测试数据集时会执行 <code>predict()</code> 进行推理；</p>
+<p>4、任务执行的输出会被持久化存储，后续任务执行时可以使用前面任务执行的输出作为输入进行执行；</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/FATE/" rel="tag"># FATE</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2024/04/28/FATE%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2%E6%95%99%E7%A8%8B/" rel="prev" title="FATE集群部署教程">
+      <i class="fa fa-chevron-left"></i> FATE集群部署教程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2024/05/20/Makefile/" rel="next" title="CMake和Make快速上手">
+      CMake和Make快速上手 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF%E4%BB%8B%E7%BB%8D"><span class="nav-text">背景介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hetero-sshe-logistic-regression%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0"><span class="nav-text">hetero_sshe_logistic_regression源码实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%9C%E4%B8%9A%E6%8F%90%E4%BA%A4"><span class="nav-text">作业提交</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%9C%E4%B8%9A%E6%89%A7%E8%A1%8C"><span class="nav-text">作业执行</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-text">任务执行流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-text">算法任务执行流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E9%97%B4%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92"><span class="nav-text">任务间数据传递</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Coup De Grace"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Coup De Grace</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Repo-Zhuang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Repo-Zhuang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/82269483@qq.com" title="E-Mail → 82269483@qq.com"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">copyright@zhaungjiehang</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+  <script defer src="/lib/three/three.min.js"></script>
+    <script defer src="/lib/three/three-waves.min.js"></script>
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+  
+  
+
+
+
+  
+</body>
+</html>
